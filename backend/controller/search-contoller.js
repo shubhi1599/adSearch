@@ -2,24 +2,31 @@ import Ads from '../model/Ads';
 
 export const search = async (req, res, next) => {
     let info = [];
-    try{
-        console.log(req.query.keyword);
-         info = await Ads.aggregate([{
-            $match:{
-                $text:{
-                    $search: req.query.keyword
-                }
-            }
-         },{
-             $lookup : { 
-                from : "companies",
+    try {
+        info = await Ads.aggregate([{
+            $lookup: {
+                from: "companies",
                 localField: "companyId",
                 foreignField: "_id",
-                as: "complete_info"  }, 
+                as: "company"
+            },
+        }, {
+            $unwind: {
+                'path': '$company'
             }
-        ]);
-        }catch(e){
-            console.log(e);
+        },
+        { $match: {
+                $or: [
+                    { "company.name": { '$regex': req.query.keyword, '$options': 'i' } },
+                    { "primaryText": { '$regex': req.query.keyword, '$options': 'i' } },
+                    { "headline": { '$regex': req.query.keyword, '$options': 'i' } },
+                    { "description": { '$regex': req.query.keyword, '$options': 'i' } },
+                ]
+            }
         }
-    return res.json({info});
+        ]);
+    } catch (e) {
+        console.log(e);
+    }
+    return res.json({ info });
 };
